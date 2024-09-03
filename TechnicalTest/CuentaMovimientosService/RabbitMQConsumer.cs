@@ -15,9 +15,12 @@ public class RabbitMQConsumer : IDisposable
     public RabbitMQConsumer(IConfiguration configuration)
     {
         _hostname = configuration["RabbitMQ:Hostname"];
-        _queueName = configuration["RabbitMQ:ConsumerQueueName"];
+        _queueName = configuration["RabbitMQ:ResponseQueueName"];
 
-        var factory = new ConnectionFactory() { HostName = _hostname };
+        var factory = new ConnectionFactory() { HostName = _hostname,
+            UserName = configuration["RabbitMQ:Username"],
+            Password = configuration["RabbitMQ:Password"]
+        };
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 

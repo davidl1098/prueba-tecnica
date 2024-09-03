@@ -11,9 +11,12 @@ public class RabbitMQPublisher
     public RabbitMQPublisher(IConfiguration configuration)
     {
         _hostname = configuration["RabbitMQ:Hostname"];
-        _queueName = configuration["RabbitMQ:PublisherQueueName"];
+        _queueName = configuration["RabbitMQ:RequestQueueName"];
 
-        var factory = new ConnectionFactory() { HostName = _hostname };
+        var factory = new ConnectionFactory() { HostName = _hostname,
+            UserName = configuration["RabbitMQ:Username"],
+            Password = configuration["RabbitMQ:Password"]
+        };
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 

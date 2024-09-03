@@ -1,4 +1,5 @@
 ﻿using ClientePersonaService.Data;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -8,22 +9,27 @@ using System.Text;
 public class RabbitMQConsumer : IDisposable
 {
     private readonly string _hostname;
-    private readonly string _queueName;
+    private readonly string _requestQueueName;
+    private readonly string _responseQueueName;
     private IConnection _connection;
     private IModel _channel;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
-    public RabbitMQConsumer(IServiceScopeFactory serviceScopeFactory)
+    public RabbitMQConsumer(IConfiguration configuration, IServiceScopeFactory serviceScopeFactory)
     {
-        _hostname = "localhost";
-        _queueName = "validar_cliente_queue";
+        _hostname = configuration["RabbitMQ:Hostname"];
+        _requestQueueName = configuration["RabbitMQ:RequestQueueName"];
+        _responseQueueName = configuration["RabbitMQ:ResponseQueueName"];
         _serviceScopeFactory = serviceScopeFactory;
 
-        var factory = new ConnectionFactory() { HostName = _hostname };
+        var factory = new ConnectionFactory() { HostName = _hostname,
+            UserName = configuration["RabbitMQ:Username"],
+            Password = configuration["RabbitMQ:Password"]
+        };
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 
-        _channel.QueueDeclare(queue: _queueName,
+        _channel.QueueDeclare(queue: _requestQueueName,
                              durable: false,
                              exclusive: false,
                              autoDelete: false,
@@ -52,7 +58,7 @@ public class RabbitMQConsumer : IDisposable
                 var responseBytes = Encoding.UTF8.GetBytes(responseMessage);
 
                 _channel.BasicPublish(exchange: "",
-                                     routingKey: "respuesta_validacion_queue",
+                                     routingKey: _responseQueueName,
                                      basicProperties: null,
                                      body: responseBytes);
 
@@ -60,7 +66,7 @@ public class RabbitMQConsumer : IDisposable
             }
         };
 
-        _channel.BasicConsume(queue: _queueName,
+        _channel.BasicConsume(queue: _requestQueueName,
                              autoAck: true,
                              consumer: consumer);
 
