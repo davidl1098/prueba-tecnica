@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución", "Elementos de la solución", "{6A16E6FA-20F9-493C-8350-E7AF3E2A162D}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services.Tests", "ClientePersonaService.Tests\Services.Tests.csproj", "{F943598B-BE7B-47BA-94F9-7B8D774FE5F6}"
