@@ -1,4 +1,6 @@
-﻿namespace CuentaMovimientosService.Models
+﻿using System.Text.Json.Serialization;
+
+namespace CuentaMovimientosService.Models
 {
     public class Movimiento
     {
@@ -9,6 +11,9 @@
         public decimal Saldo { get; set; }
 
         public int CuentaId { get; set; }  // Clave foránea
-        public Cuenta Cuenta { get; set; }
+
+        [JsonIgnore]
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public Cuenta? Cuenta { get; set; }
     }
 }

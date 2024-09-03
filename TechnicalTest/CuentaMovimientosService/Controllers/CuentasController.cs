@@ -1,7 +1,8 @@
-﻿using CuentaMovimientosService.Data;
-using CuentaMovimientosService.Models;
+﻿using CuentaMovimientosService.Models;
+using CuentaMovimientosService.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CuentaMovimientosService.Controllers
 {
@@ -9,41 +10,58 @@ namespace CuentaMovimientosService.Controllers
     [Route("api/[controller]")]
     public class CuentasController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICuentaRepository _cuentaRepository;
+        private readonly RabbitMQPublisher _rabbitMqPublisher;
+        private readonly RabbitMQConsumer _rabbitMqConsumer;
 
-        public CuentasController(ApplicationDbContext context)
+        public CuentasController(ICuentaRepository cuentaRepository, RabbitMQPublisher rabbitMqPublisher, RabbitMQConsumer rabbitMqConsumer)
         {
-            _context = context;
+            _cuentaRepository = cuentaRepository;
+            _rabbitMqPublisher = rabbitMqPublisher;
+            _rabbitMqConsumer = rabbitMqConsumer;
         }
 
+        // GET: api/Cuentas
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cuenta>>> GetCuentas()
+        public async Task<IActionResult> GetCuentas()
         {
-            return await _context.Cuentas.ToListAsync();
+            var cuentas = await _cuentaRepository.GetAllCuentasAsync();
+            return Ok(cuentas);
         }
 
+        // GET: api/Cuentas/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cuenta>> GetCuenta(int id)
+        public async Task<IActionResult> GetCuenta(int id)
         {
-            var cuenta = await _context.Cuentas.FindAsync(id);
-
+            var cuenta = await _cuentaRepository.GetCuentaByIdAsync(id);
             if (cuenta == null)
             {
                 return NotFound();
             }
-
-            return cuenta;
+            return Ok(cuenta);
         }
 
+        // POST: api/Cuentas
         [HttpPost]
-        public async Task<ActionResult<Cuenta>> PostCuenta(Cuenta cuenta)
+        public async Task<IActionResult> PostCuenta(Cuenta cuenta)
         {
-            _context.Cuentas.Add(cuenta);
-            await _context.SaveChangesAsync();
+            // Publicar solicitud de validación
+            _rabbitMqPublisher.PublishValidarCliente(cuenta.ClienteId);
 
-            return CreatedAtAction("GetCuenta", new { id = cuenta.Id }, cuenta);
+            // Esperar la respuesta de validación
+            var isValid = await _rabbitMqConsumer.WaitForValidationResponseAsync();
+
+            if (!isValid)
+            {
+                return BadRequest("Cliente no válido");
+            }
+
+            // Si el cliente es válido, agregar la cuenta
+            await _cuentaRepository.AddCuentaAsync(cuenta);
+            return CreatedAtAction(nameof(GetCuenta), new { id = cuenta.Id }, cuenta);
         }
 
+        // PUT: api/Cuentas/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCuenta(int id, Cuenta cuenta)
         {
@@ -52,46 +70,24 @@ namespace CuentaMovimientosService.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(cuenta).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CuentaExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _cuentaRepository.UpdateCuentaAsync(cuenta);
 
             return NoContent();
         }
 
+        // DELETE: api/Cuentas/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCuenta(int id)
         {
-            var cuenta = await _context.Cuentas.FindAsync(id);
+            var cuenta = await _cuentaRepository.GetCuentaByIdAsync(id);
             if (cuenta == null)
             {
                 return NotFound();
             }
 
-            _context.Cuentas.Remove(cuenta);
-            await _context.SaveChangesAsync();
+            await _cuentaRepository.DeleteCuentaAsync(id);
 
             return NoContent();
         }
-
-        private bool CuentaExists(int id)
-        {
-            return _context.Cuentas.Any(e => e.Id == id);
-        }
     }
-
 }

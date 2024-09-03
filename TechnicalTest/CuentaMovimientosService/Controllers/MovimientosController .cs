@@ -1,7 +1,9 @@
-﻿using CuentaMovimientosService.Data;
-using CuentaMovimientosService.Models;
+﻿using CuentaMovimientosService.Models;
+using CuentaMovimientosService.Repositories.Implementations;
+using CuentaMovimientosService.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CuentaMovimientosService.Controllers
 {
@@ -9,71 +11,92 @@ namespace CuentaMovimientosService.Controllers
     [Route("api/[controller]")]
     public class MovimientosController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IMovimientoRepository _movimientoRepository;
+        private readonly ICuentaRepository _cuentaRepository;
 
-        public MovimientosController(ApplicationDbContext context)
+        public MovimientosController(IMovimientoRepository movimientoRepository, ICuentaRepository cuentaRepository)
         {
-            _context = context;
+            _movimientoRepository = movimientoRepository;
+            _cuentaRepository = cuentaRepository;
         }
 
+        // GET: api/Movimientos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Movimiento>>> GetMovimientos()
+        public async Task<IActionResult> GetMovimientos()
         {
-            return await _context.Movimientos.Include(m => m.Cuenta).ToListAsync();
+            var movimientos = await _movimientoRepository.GetAllMovimientosAsync();
+            return Ok(movimientos);
         }
 
+        // GET: api/Movimientos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Movimiento>> GetMovimiento(int id)
+        public async Task<IActionResult> GetMovimiento(int id)
         {
-            var movimiento = await _context.Movimientos.Include(m => m.Cuenta)
-                                                        .FirstOrDefaultAsync(m => m.Id == id);
-
+            var movimiento = await _movimientoRepository.GetMovimientoByIdAsync(id);
             if (movimiento == null)
             {
                 return NotFound();
             }
-
-            return movimiento;
+            return Ok(movimiento);
         }
 
+        // POST: api/Movimientos
         [HttpPost]
-        public async Task<ActionResult<Movimiento>> PostMovimiento(Movimiento movimiento)
+        public async Task<IActionResult> PostMovimiento(Movimiento movimiento)
         {
-            var cuenta = await _context.Cuentas.FindAsync(movimiento.CuentaId);
-
+            // Obtener la cuenta asociada
+            var cuenta = await _cuentaRepository.GetCuentaByIdAsync(movimiento.CuentaId);
             if (cuenta == null)
             {
-                return BadRequest("Cuenta no encontrada");
+                return NotFound("Cuenta no encontrada.");
             }
 
-            if (movimiento.TipoMovimiento.ToLower() == "retiro" && cuenta.SaldoInicial < movimiento.Valor)
+            // Verificar si el movimiento es un retiro y si hay saldo suficiente
+            if (movimiento.Valor < 0 && cuenta.SaldoInicial + movimiento.Valor < 0)
             {
                 return BadRequest("Saldo no disponible");
             }
 
-            cuenta.SaldoInicial += movimiento.TipoMovimiento.ToLower() == "deposito" ? movimiento.Valor : -movimiento.Valor;
-            movimiento.Saldo = cuenta.SaldoInicial;
+            // Actualizar el saldo de la cuenta
+            cuenta.SaldoInicial += movimiento.Valor;
 
-            _context.Movimientos.Add(movimiento);
-            await _context.SaveChangesAsync();
+            // Registrar el movimiento
+            await _movimientoRepository.AddMovimientoAsync(movimiento);
 
-            return CreatedAtAction("GetMovimiento", new { id = movimiento.Id }, movimiento);
+            // Actualizar la cuenta en la base de datos
+            await _cuentaRepository.UpdateCuentaAsync(cuenta);
+
+            return CreatedAtAction(nameof(GetMovimiento), new { id = movimiento.Id }, movimiento);
         }
 
+
+        // PUT: api/Movimientos/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutMovimiento(int id, Movimiento movimiento)
+        {
+            if (id != movimiento.Id)
+            {
+                return BadRequest();
+            }
+
+            await _movimientoRepository.UpdateMovimientoAsync(movimiento);
+
+            return NoContent();
+        }
+
+        // DELETE: api/Movimientos/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMovimiento(int id)
         {
-            var movimiento = await _context.Movimientos.FindAsync(id);
+            var movimiento = await _movimientoRepository.GetMovimientoByIdAsync(id);
             if (movimiento == null)
             {
                 return NotFound();
             }
 
-            _context.Movimientos.Remove(movimiento);
-            await _context.SaveChangesAsync();
+            await _movimientoRepository.DeleteMovimientoAsync(id);
 
             return NoContent();
         }
     }
-
 }

@@ -10,7 +10,6 @@ namespace ClientePersonaService.Data
         {
         }
 
-        public DbSet<Persona> Personas { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
     }
 }

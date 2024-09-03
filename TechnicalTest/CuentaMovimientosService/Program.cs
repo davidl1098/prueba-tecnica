@@ -1,4 +1,6 @@
 using CuentaMovimientosService.Data;
+using CuentaMovimientosService.Repositories.Implementations;
+using CuentaMovimientosService.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<ICuentaRepository, CuentaRepository>();
+builder.Services.AddScoped<IMovimientoRepository, MovimientoRepository>();
+
+builder.Services.AddSingleton<RabbitMQPublisher>();
+builder.Services.AddSingleton<RabbitMQConsumer>();
 
 var app = builder.Build();
 
@@ -30,5 +37,12 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var consumer = scope.ServiceProvider.GetRequiredService<RabbitMQConsumer>();
+    Task.Run(() => consumer.WaitForValidationResponseAsync()); // Inicia el consumidor
+}
+
 
 app.Run();

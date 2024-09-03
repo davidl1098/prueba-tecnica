@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CuentaMovimientosService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240902061920_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20240903103745_CuentaRequired")]
+    partial class CuentaRequired
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,6 +32,9 @@ namespace CuentaMovimientosService.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("Estado")
                         .HasColumnType("bit");
@@ -86,12 +89,17 @@ namespace CuentaMovimientosService.Migrations
             modelBuilder.Entity("CuentaMovimientosService.Models.Movimiento", b =>
                 {
                     b.HasOne("CuentaMovimientosService.Models.Cuenta", "Cuenta")
-                        .WithMany()
+                        .WithMany("Movimientos")
                         .HasForeignKey("CuentaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Cuenta");
+                });
+
+            modelBuilder.Entity("CuentaMovimientosService.Models.Cuenta", b =>
+                {
+                    b.Navigation("Movimientos");
                 });
 #pragma warning restore 612, 618
         }

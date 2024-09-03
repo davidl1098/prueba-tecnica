@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using ClientePersonaService.Models;
+using ClientePersonaService.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ClientePersonaService.Data;
-using ClientePersonaService.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ClientePersonaService.Controllers
 {
@@ -14,41 +10,42 @@ namespace ClientePersonaService.Controllers
     [Route("api/[controller]")]
     public class ClientesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IClienteRepository _clienteRepository;
 
-        public ClientesController(ApplicationDbContext context)
+        public ClientesController(IClienteRepository clienteRepository)
         {
-            _context = context;
+            _clienteRepository = clienteRepository;
         }
 
+        // GET: api/Clientes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
+        public async Task<IActionResult> GetClientes()
         {
-            return await _context.Clientes.ToListAsync();
+            var clientes = await _clienteRepository.GetAllClientesAsync();
+            return Ok(clientes);
         }
 
+        // GET: api/Clientes/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cliente>> GetCliente(int id)
+        public async Task<IActionResult> GetCliente(int id)
         {
-            var cliente = await _context.Clientes.FindAsync(id);
-
+            var cliente = await _clienteRepository.GetClienteByIdAsync(id);
             if (cliente == null)
             {
                 return NotFound();
             }
-
-            return cliente;
+            return Ok(cliente);
         }
 
+        // POST: api/Clientes
         [HttpPost]
-        public async Task<ActionResult<Cliente>> PostCliente(Cliente cliente)
+        public async Task<IActionResult> PostCliente(Cliente cliente)
         {
-            _context.Clientes.Add(cliente);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetCliente", new { id = cliente.Id }, cliente);
+            await _clienteRepository.AddClienteAsync(cliente);
+            return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, cliente);
         }
 
+        // PUT: api/Clientes/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCliente(int id, Cliente cliente)
         {
@@ -57,45 +54,24 @@ namespace ClientePersonaService.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(cliente).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ClienteExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _clienteRepository.UpdateClienteAsync(cliente);
 
             return NoContent();
         }
 
+        // DELETE: api/Clientes/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCliente(int id)
         {
-            var cliente = await _context.Clientes.FindAsync(id);
+            var cliente = await _clienteRepository.GetClienteByIdAsync(id);
             if (cliente == null)
             {
                 return NotFound();
             }
 
-            _context.Clientes.Remove(cliente);
-            await _context.SaveChangesAsync();
+            await _clienteRepository.DeleteClienteAsync(id);
 
             return NoContent();
-        }
-
-        private bool ClienteExists(int id)
-        {
-            return _context.Clientes.Any(e => e.Id == id);
         }
     }
 }

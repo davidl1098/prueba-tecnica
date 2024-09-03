@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  clientepersona:
+    build:
+      context: .
+      dockerfile: ClientePersonaService/Dockerfile
+    ports:
+      - "8080:80"  # Mapea el puerto 8080 en la máquina host al puerto 80 en el contenedor.
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - rabbitmq
+
+  cuentamovimientos:
+    build:
+      context: .
+      dockerfile: CuentaMovimientosService/Dockerfile
+    ports:
+      - "8081:80"  # Mapea el puerto 8081 en la máquina host al puerto 80 en el contenedor.
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "15672:15672"  # Puerto para la interfaz web de RabbitMQ.
+      - "5672:5672"    # Puerto para la comunicación entre servicios.

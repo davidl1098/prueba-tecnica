@@ -1,4 +1,6 @@
 using ClientePersonaService.Data;
+using ClientePersonaService.Repositories.Implementations;
+using ClientePersonaService.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +14,10 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+
+builder.Services.AddSingleton<RabbitMQConsumer>();
 
 var app = builder.Build();
 
@@ -28,5 +34,12 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Iniciar el consumidor de RabbitMQ
+using (var scope = app.Services.CreateScope())
+{
+    var consumer = scope.ServiceProvider.GetRequiredService<RabbitMQConsumer>();
+    consumer.Start(); // Inicia la escucha de mensajes
+}
 
 app.Run();

@@ -33,28 +33,15 @@ namespace ClientePersonaService.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("Estado")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Clientes", (string)null);
-                });
-
-            modelBuilder.Entity("ClientePersonaService.Models.Persona", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<string>("Direccion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Edad")
                         .HasColumnType("int");
+
+                    b.Property<bool>("Estado")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Genero")
                         .IsRequired()
@@ -74,7 +61,7 @@ namespace ClientePersonaService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Personas", (string)null);
+                    b.ToTable("Clientes");
                 });
 #pragma warning restore 612, 618
         }
