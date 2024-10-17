@@ -1,4 +1,4 @@
-# neoris
+# EJERCICIO TECNICO
 technical exercise
 *Construido en .Net 8
 *Base de Datos: localDB SQL Server
